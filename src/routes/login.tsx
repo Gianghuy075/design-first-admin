@@ -14,7 +14,8 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const navigate = useNavigate();
   const [apiUrl, setApiUrl] = useState(API_BASE);
-  const [token, setTokenInput] = useState("");
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("admjnad123");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,13 +32,23 @@ function LoginPage() {
     setError(null);
     setLoading(true);
     setApiBase(apiUrl.trim());
-    setToken(token.trim());
     try {
-      await apiFetch("/auth/me");
+      const res = await apiFetch<any>("/auth/login", {
+        method: "POST",
+        auth: false,
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+      const token =
+        res?.data?.token ||
+        res?.data?.accessToken ||
+        res?.data?.access_token ||
+        (typeof res?.data === "string" ? res.data : null);
+      if (!token) throw new Error("Không tìm thấy token trong phản hồi");
+      setToken(token);
       navigate({ to: "/" });
     } catch (err) {
       setToken(null);
-      setError(err instanceof Error ? err.message : "Token không hợp lệ");
+      setError(err instanceof Error ? err.message : "Đăng nhập thất bại");
     } finally {
       setLoading(false);
     }
@@ -63,7 +74,7 @@ function LoginPage() {
           <div>
             <h2 className="text-lg font-semibold">Đăng nhập</h2>
             <p className="text-sm text-muted-foreground">
-              Dán JWT token để truy cập dashboard.
+              Nhập tài khoản quản trị để truy cập dashboard.
             </p>
           </div>
 
@@ -78,15 +89,27 @@ function LoginPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="token">JWT Token</Label>
-            <textarea
-              id="token"
-              value={token}
-              onChange={(e) => setTokenInput(e.target.value)}
+            <Label htmlFor="username">Tài khoản</Label>
+            <Input
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
               required
-              rows={4}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="eyJhbGciOi..."
+              placeholder="admin"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Mật khẩu</Label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+              placeholder="••••••••"
             />
           </div>
 
