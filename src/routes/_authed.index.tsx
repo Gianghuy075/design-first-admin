@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { PageHeader, DataState } from "@/components/page-header";
 import { formatVnd, formatDate } from "@/lib/format";
+import { RevenueChart, StatusChart, TopProductsChart } from "@/components/dashboard-charts";
 import {
   Package,
   ShoppingCart,
@@ -90,6 +91,10 @@ function DashboardPage() {
     queryKey: ["me"],
     queryFn: () => apiFetch<any>("/auth/me"),
   });
+  const topProducts = useQuery({
+    queryKey: ["products-top"],
+    queryFn: () => apiFetch<any[]>("/products/top", { auth: false }),
+  });
 
   const totalProducts = products.data?.meta?.total ?? products.data?.data?.length ?? 0;
   const totalCategories = categories.data?.data?.length ?? 0;
@@ -100,6 +105,8 @@ function DashboardPage() {
     0,
   );
   const recent = (orders.data?.data ?? []).slice(0, 6);
+  const allOrders = orders.data?.data ?? [];
+  const allTopProducts = topProducts.data?.data ?? [];
 
   return (
     <div>
@@ -138,6 +145,17 @@ function DashboardPage() {
             Zalo ID: {me.data?.data?.zaloId ?? "—"}
           </p>
         </div>
+      </div>
+
+      <div className="rounded-2xl bg-card shadow-[var(--shadow-card)] overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-0 mb-6 [&]:bg-transparent [&]:shadow-none">
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <RevenueChart orders={allOrders} />
+        <StatusChart orders={allOrders} />
+        <TopProductsChart orders={allOrders} products={allTopProducts} />
       </div>
 
       <div className="rounded-2xl bg-card shadow-[var(--shadow-card)] overflow-hidden">
