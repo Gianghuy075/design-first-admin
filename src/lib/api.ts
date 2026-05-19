@@ -1,5 +1,8 @@
-const RAW_BASE = (typeof window !== "undefined" && localStorage.getItem("hm_api_base")) || "http://localhost:3000/api";
-export const API_BASE = RAW_BASE.replace(/\/$/, "");
+const DEFAULT_BASE = "http://localhost:3000/api";
+export const API_BASE =
+  typeof window !== "undefined"
+    ? (localStorage.getItem("hm_api_base") || DEFAULT_BASE).replace(/\/$/, "")
+    : DEFAULT_BASE;
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
