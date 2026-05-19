@@ -8,6 +8,12 @@ import { formatVnd } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Search, Package, X } from "lucide-react";
 
+type ProductsSearch = {
+  search: string;
+  categoryId: string;
+  page: number;
+};
+
 const productsSearchSchema = z.object({
   search: fallback(z.string(), "").default(""),
   categoryId: fallback(z.string(), "").default(""),
@@ -54,7 +60,7 @@ function ProductsPage() {
           <Input
             value={search}
             onChange={(e) =>
-              navigate({ search: (prev) => ({ ...prev, search: e.target.value, page: 1 }) })
+              navigate({ search: (prev: ProductsSearch) => ({ ...prev, search: e.target.value, page: 1 }) })
             }
             placeholder="Tìm theo tên sản phẩm..."
             className="pl-9 h-11 rounded-lg bg-card"
@@ -63,7 +69,7 @@ function ProductsPage() {
         <select
           value={categoryId}
           onChange={(e) =>
-            navigate({ search: (prev) => ({ ...prev, categoryId: e.target.value, page: 1 }) })
+            navigate({ search: (prev: ProductsSearch) => ({ ...prev, categoryId: e.target.value, page: 1 }) })
           }
           className="h-11 px-3 rounded-lg border border-input bg-card text-sm min-w-[180px]"
         >
@@ -158,7 +164,7 @@ function Pagination({ page, totalPages }: { page: number; totalPages: number }) 
     <div className="flex items-center justify-center gap-1.5 mt-6 flex-wrap">
       <Link
         from={Route.fullPath}
-        search={(prev) => ({ ...prev, page: Math.max(1, page - 1) })}
+        search={(prev: ProductsSearch) => ({ ...prev, page: Math.max(1, page - 1) })}
         disabled={page === 1}
         className="h-9 px-3 rounded-lg border border-input bg-card text-sm font-medium hover:bg-muted aria-disabled:opacity-50 aria-disabled:pointer-events-none"
         aria-disabled={page === 1}
@@ -172,7 +178,7 @@ function Pagination({ page, totalPages }: { page: number; totalPages: number }) 
           <Link
             key={p}
             from={Route.fullPath}
-            search={(prev) => ({ ...prev, page: p })}
+            search={(prev: ProductsSearch) => ({ ...prev, page: p })}
             className={`h-9 min-w-9 px-3 rounded-lg text-sm font-medium grid place-items-center ${
               p === page
                 ? "bg-primary text-primary-foreground shadow-[var(--shadow-button)]"
@@ -185,7 +191,7 @@ function Pagination({ page, totalPages }: { page: number; totalPages: number }) 
       )}
       <Link
         from={Route.fullPath}
-        search={(prev) => ({ ...prev, page: Math.min(totalPages, page + 1) })}
+        search={(prev: ProductsSearch) => ({ ...prev, page: Math.min(totalPages, page + 1) })}
         disabled={page >= totalPages}
         className="h-9 px-3 rounded-lg border border-input bg-card text-sm font-medium hover:bg-muted aria-disabled:opacity-50 aria-disabled:pointer-events-none"
         aria-disabled={page >= totalPages}
