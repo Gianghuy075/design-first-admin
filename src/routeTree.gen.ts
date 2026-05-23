@@ -14,6 +14,7 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as AuthedIndexRouteImport } from './routes/_authed.index'
 import { Route as AuthedWheelRouteImport } from './routes/_authed.wheel'
 import { Route as AuthedVouchersRouteImport } from './routes/_authed.vouchers'
+import { Route as AuthedUsersRouteImport } from './routes/_authed.users'
 import { Route as AuthedProductsRouteImport } from './routes/_authed.products'
 import { Route as AuthedOrdersRouteImport } from './routes/_authed.orders'
 import { Route as AuthedNewsRouteImport } from './routes/_authed.news'
@@ -41,6 +42,11 @@ const AuthedWheelRoute = AuthedWheelRouteImport.update({
 const AuthedVouchersRoute = AuthedVouchersRouteImport.update({
   id: '/vouchers',
   path: '/vouchers',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedUsersRoute = AuthedUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedProductsRoute = AuthedProductsRouteImport.update({
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/news': typeof AuthedNewsRoute
   '/orders': typeof AuthedOrdersRoute
   '/products': typeof AuthedProductsRoute
+  '/users': typeof AuthedUsersRoute
   '/vouchers': typeof AuthedVouchersRoute
   '/wheel': typeof AuthedWheelRoute
 }
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/news': typeof AuthedNewsRoute
   '/orders': typeof AuthedOrdersRoute
   '/products': typeof AuthedProductsRoute
+  '/users': typeof AuthedUsersRoute
   '/vouchers': typeof AuthedVouchersRoute
   '/wheel': typeof AuthedWheelRoute
   '/': typeof AuthedIndexRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/_authed/news': typeof AuthedNewsRoute
   '/_authed/orders': typeof AuthedOrdersRoute
   '/_authed/products': typeof AuthedProductsRoute
+  '/_authed/users': typeof AuthedUsersRoute
   '/_authed/vouchers': typeof AuthedVouchersRoute
   '/_authed/wheel': typeof AuthedWheelRoute
   '/_authed/': typeof AuthedIndexRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/news'
     | '/orders'
     | '/products'
+    | '/users'
     | '/vouchers'
     | '/wheel'
   fileRoutesByTo: FileRoutesByTo
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
     | '/news'
     | '/orders'
     | '/products'
+    | '/users'
     | '/vouchers'
     | '/wheel'
     | '/'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
     | '/_authed/news'
     | '/_authed/orders'
     | '/_authed/products'
+    | '/_authed/users'
     | '/_authed/vouchers'
     | '/_authed/wheel'
     | '/_authed/'
@@ -172,6 +184,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedVouchersRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/users': {
+      id: '/_authed/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AuthedUsersRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/products': {
       id: '/_authed/products'
       path: '/products'
@@ -208,6 +227,7 @@ interface AuthedRouteChildren {
   AuthedNewsRoute: typeof AuthedNewsRoute
   AuthedOrdersRoute: typeof AuthedOrdersRoute
   AuthedProductsRoute: typeof AuthedProductsRoute
+  AuthedUsersRoute: typeof AuthedUsersRoute
   AuthedVouchersRoute: typeof AuthedVouchersRoute
   AuthedWheelRoute: typeof AuthedWheelRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
@@ -218,6 +238,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedNewsRoute: AuthedNewsRoute,
   AuthedOrdersRoute: AuthedOrdersRoute,
   AuthedProductsRoute: AuthedProductsRoute,
+  AuthedUsersRoute: AuthedUsersRoute,
   AuthedVouchersRoute: AuthedVouchersRoute,
   AuthedWheelRoute: AuthedWheelRoute,
   AuthedIndexRoute: AuthedIndexRoute,

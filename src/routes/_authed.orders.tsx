@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { PageHeader, DataState } from "@/components/page-header";
 import { formatVnd, formatDate } from "@/lib/format";
@@ -32,6 +33,18 @@ type OrdersSearch = {
   page: number;
 };
 
+type OrderRow = {
+  id: string;
+  code?: string;
+  payMethod?: string | null;
+  note?: string | null;
+  status?: string;
+  items?: unknown[];
+  products?: unknown[];
+  total?: number;
+  createdAt?: string | Date;
+};
+
 export const Route = createFileRoute("/_authed/orders")({
   head: () => ({ meta: [{ title: "Đơn hàng — HappyMall Admin" }] }),
   validateSearch: zodValidator(ordersSearchSchema),
@@ -59,39 +72,83 @@ const STATUS_TONE: Record<string, string> = {
   returned: "bg-gray-200 text-gray-700",
 };
 
-const LIMIT = 15;
+const REQUEST_LIMIT = 15;
+const EMPTY_ORDERS: OrderRow[] = [];
 
 function OrdersPage() {
   const { status, q, page } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
+  const queryClient = useQueryClient();
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
 
   const query = useQuery({
-    queryKey: ["orders", status],
+    queryKey: ["orders-admin", { status, page }],
     queryFn: () =>
-      apiFetch<any[]>("/orders", { query: { status: status || undefined } }),
+      apiFetch<OrderRow[]>("/orders/admin/all", {
+        query: {
+          status: status || undefined,
+          page,
+          limit: REQUEST_LIMIT,
+        },
+      }),
   });
-  const all = query.data?.data ?? [];
+  const pageOrders = query.data?.data ?? EMPTY_ORDERS;
+  const responsePage = Number(query.data?.meta?.page ?? page);
+  const responseLimit = Number(query.data?.meta?.limit ?? REQUEST_LIMIT);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    if (!term) return all;
-    return all.filter((o: any) =>
-      [(o.code ?? o.id), o.payMethod, o.note]
+    if (!term) return pageOrders;
+    return pageOrders.filter((o) =>
+      [o.code ?? o.id, o.payMethod, o.note]
         .map((v) => (v ?? "").toString().toLowerCase())
         .some((s) => s.includes(term)),
     );
-  }, [all, q]);
+  }, [pageOrders, q]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / LIMIT));
-  const safePage = Math.min(page, totalPages);
-  const list = filtered.slice((safePage - 1) * LIMIT, safePage * LIMIT);
+  const total = Number(query.data?.meta?.total ?? pageOrders.length);
+  const totalPages = Math.max(1, Math.ceil(total / responseLimit));
+  const safePage = Math.min(responsePage, totalPages);
+  const list = filtered;
   const hasFilter = status || q;
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, nextStatus }: { id: string; nextStatus: string }) =>
+      apiFetch(`/orders/admin/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: nextStatus }),
+      }),
+    onSuccess: (_, variables) => {
+      setPendingOrderId(null);
+      void queryClient.invalidateQueries({ queryKey: ["orders-admin"] });
+      const label =
+        STATUSES.find((item) => item.value === variables.nextStatus)?.label ?? variables.nextStatus;
+      toast.success(`Đã cập nhật trạng thái thành ${label}`);
+    },
+    onError: (error) => {
+      setPendingOrderId(null);
+      const message = error instanceof Error ? error.message : "Cập nhật trạng thái thất bại";
+      toast.error(message);
+    },
+  });
+
+  useEffect(() => {
+    if (!query.isLoading && page > totalPages) {
+      navigate({
+        search: (prev: OrdersSearch) => ({ ...prev, page: totalPages }),
+      });
+    }
+  }, [page, totalPages, query.isLoading, navigate]);
 
   return (
     <div>
       <PageHeader
         title="Đơn hàng"
-        subtitle={`Hiển thị ${list.length} / ${filtered.length} đơn`}
+        subtitle={
+          q
+            ? `Hiển thị ${list.length} / ${pageOrders.length} đơn (trang ${safePage}) • Tổng ${total} đơn`
+            : `Tổng ${total} đơn hàng`
+        }
       />
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -131,9 +188,7 @@ function OrdersPage() {
         </div>
         {hasFilter && (
           <button
-            onClick={() =>
-              navigate({ search: { status: "", q: "", page: 1 } })
-            }
+            onClick={() => navigate({ search: { status: "", q: "", page: 1 } })}
             className="h-11 px-3 rounded-lg border border-input bg-card text-sm font-medium hover:bg-muted inline-flex items-center gap-1"
           >
             <X className="size-4" /> Xóa lọc
@@ -164,34 +219,48 @@ function OrdersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {list.map((o: any) => (
-                    <tr
-                      key={o.id}
-                      className="border-t border-border hover:bg-muted/30"
-                    >
-                      <td className="px-6 py-3 font-mono font-semibold">
-                        {o.code ?? o.id}
-                      </td>
+                  {list.map((o) => (
+                    <tr key={o.id} className="border-t border-border hover:bg-muted/30">
+                      <td className="px-6 py-3 font-mono font-semibold">{o.code ?? o.id}</td>
                       <td className="px-6 py-3">
-                        <span
-                          className={`inline-flex px-2 py-1 rounded-md text-xs font-medium ${
-                            STATUS_TONE[o.status] ?? "bg-muted"
-                          }`}
-                        >
-                          {STATUSES.find((s) => s.value === o.status)?.label ??
-                            o.status}
-                        </span>
+                        <div className="space-y-1">
+                          <span
+                            className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${
+                              STATUS_TONE[o.status] ?? "bg-muted"
+                            }`}
+                          >
+                            {STATUSES.find((s) => s.value === o.status)?.label ?? o.status}
+                          </span>
+                          <select
+                            value={o.status ?? ""}
+                            disabled={statusMutation.isPending && pendingOrderId === o.id}
+                            onChange={(event) => {
+                              const nextStatus = event.target.value;
+                              if (!nextStatus || nextStatus === o.status) return;
+                              setPendingOrderId(o.id);
+                              statusMutation.mutate({ id: o.id, nextStatus });
+                            }}
+                            className="h-8 min-w-[150px] rounded-md border border-input bg-background px-2 text-xs"
+                          >
+                            <option value="" disabled>
+                              Chọn trạng thái
+                            </option>
+                            {STATUSES.filter((item) => item.value).map((item) => (
+                              <option key={item.value} value={item.value}>
+                                {item.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </td>
                       <td className="px-6 py-3 text-muted-foreground">
-                        {(o.items?.length ?? 0)} món
+                        {o.items?.length ?? o.products?.length ?? 0} món
                       </td>
                       <td className="px-6 py-3 text-right font-semibold text-primary">
                         {formatVnd(o.total)}
                       </td>
                       <td className="px-6 py-3">{o.payMethod ?? "—"}</td>
-                      <td className="px-6 py-3 text-muted-foreground">
-                        {formatDate(o.createdAt)}
-                      </td>
+                      <td className="px-6 py-3 text-muted-foreground">{formatDate(o.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -205,22 +274,12 @@ function OrdersPage() {
   );
 }
 
-function OrdersPagination({
-  page,
-  totalPages,
-}: {
-  page: number;
-  totalPages: number;
-}) {
+function OrdersPagination({ page, totalPages }: { page: number; totalPages: number }) {
   if (totalPages <= 1) return null;
   const window = 2;
   const pages: (number | "…")[] = [];
   for (let i = 1; i <= totalPages; i++) {
-    if (
-      i === 1 ||
-      i === totalPages ||
-      (i >= page - window && i <= page + window)
-    ) {
+    if (i === 1 || i === totalPages || (i >= page - window && i <= page + window)) {
       pages.push(i);
     } else if (pages[pages.length - 1] !== "…") {
       pages.push("…");

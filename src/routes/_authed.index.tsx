@@ -4,14 +4,7 @@ import { apiFetch } from "@/lib/api";
 import { PageHeader, DataState } from "@/components/page-header";
 import { formatVnd, formatDate } from "@/lib/format";
 import { RevenueChart, StatusChart, TopProductsChart } from "@/components/dashboard-charts";
-import {
-  Package,
-  ShoppingCart,
-  Ticket,
-  Tag,
-  TrendingUp,
-  Users,
-} from "lucide-react";
+import { Package, ShoppingCart, Ticket, Tag, TrendingUp, Users } from "lucide-react";
 
 export const Route = createFileRoute("/_authed/")({
   head: () => ({ meta: [{ title: "Tổng quan — HappyMall Admin" }] }),
@@ -41,9 +34,7 @@ function StatCard({
         <Icon className="size-6" />
       </div>
       <div className="min-w-0">
-        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
-          {label}
-        </p>
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
         <p className="text-2xl font-bold text-foreground truncate">{value}</p>
       </div>
     </div>
@@ -107,11 +98,14 @@ function DashboardPage() {
   const recent = (orders.data?.data ?? []).slice(0, 6);
   const allOrders = orders.data?.data ?? [];
   const allTopProducts = topProducts.data?.data ?? [];
+  const meData = me.data?.data;
+  const displayName = meData?.username?.trim() || meData?.name?.trim() || "";
+  const accountIdentifier = meData?.username?.trim() || "—";
 
   return (
     <div>
       <PageHeader
-        title={`Chào mừng${me.data?.data?.name ? `, ${me.data.data.name}` : ""}!`}
+        title={`Chào mừng${displayName ? `, ${displayName}` : ""}!`}
         subtitle="Tổng quan hoạt động của HappyMall"
       />
 
@@ -129,21 +123,15 @@ function DashboardPage() {
             Doanh thu đơn hàng (toàn bộ)
           </div>
           <p className="text-4xl font-bold mt-2">{formatVnd(revenue)}</p>
-          <p className="text-sm opacity-90 mt-1">
-            Tổng từ {totalOrders} đơn hàng đã ghi nhận
-          </p>
+          <p className="text-sm opacity-90 mt-1">Tổng từ {totalOrders} đơn hàng đã ghi nhận</p>
         </div>
         <div className="rounded-2xl bg-sidebar text-sidebar-foreground p-6 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-2 text-sm opacity-90">
             <Users className="size-4" />
             Tài khoản
           </div>
-          <p className="text-lg font-semibold mt-2 truncate">
-            {me.data?.data?.name ?? "—"}
-          </p>
-          <p className="text-xs opacity-80 truncate">
-            Zalo ID: {me.data?.data?.zaloId ?? "—"}
-          </p>
+          <p className="text-lg font-semibold mt-2 truncate">{displayName || "—"}</p>
+          <p className="text-xs opacity-80 truncate">Tài khoản: {accountIdentifier}</p>
         </div>
       </div>
 
@@ -190,12 +178,8 @@ function DashboardPage() {
                         {STATUS_LABEL[o.status] ?? o.status}
                       </span>
                     </td>
-                    <td className="px-6 py-3 text-right font-semibold">
-                      {formatVnd(o.total)}
-                    </td>
-                    <td className="px-6 py-3 text-muted-foreground">
-                      {formatDate(o.createdAt)}
-                    </td>
+                    <td className="px-6 py-3 text-right font-semibold">{formatVnd(o.total)}</td>
+                    <td className="px-6 py-3 text-muted-foreground">{formatDate(o.createdAt)}</td>
                   </tr>
                 ))}
               </tbody>

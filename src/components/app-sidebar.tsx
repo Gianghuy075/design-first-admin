@@ -9,6 +9,7 @@ import {
   Newspaper,
   LogOut,
   ShoppingBag,
+  Users,
 } from "lucide-react";
 import {
   Sidebar,
@@ -32,6 +33,7 @@ const items = [
   { title: "Voucher", url: "/vouchers", icon: Ticket },
   { title: "Vòng quay", url: "/wheel", icon: Gift },
   { title: "Tin tức", url: "/news", icon: Newspaper },
+  { title: "Người dùng", url: "/users", icon: Users },
 ] as const;
 
 export function AppSidebar() {

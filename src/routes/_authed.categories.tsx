@@ -1,13 +1,60 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus, Tag, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { PageHeader, DataState } from "@/components/page-header";
-import { Tag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-export const Route = createFileRoute("/_authed/categories")({
-  head: () => ({ meta: [{ title: "Danh mục — HappyMall Admin" }] }),
-  component: CategoriesPage,
-});
+type CategoryItem = {
+  id: string;
+  name: string;
+  description?: string | null;
+  icon?: string | null;
+  image?: string | null;
+  slug?: string | null;
+  sortOrder?: number | null;
+  productCount?: number | null;
+  products?: unknown[] | null;
+};
+
+type CategoryFormState = {
+  name: string;
+  description: string;
+  icon: string;
+  slug: string;
+  sortOrder: string;
+};
+
+const defaultForm: CategoryFormState = {
+  name: "",
+  description: "",
+  icon: "",
+  slug: "",
+  sortOrder: "0",
+};
 
 const PASTELS = [
   "bg-orange-100 text-orange-700",
@@ -20,47 +67,272 @@ const PASTELS = [
   "bg-teal-100 text-teal-700",
 ];
 
+export const Route = createFileRoute("/_authed/categories")({
+  head: () => ({ meta: [{ title: "Danh mục — HappyMall Admin" }] }),
+  component: CategoriesPage,
+});
+
 function CategoriesPage() {
+  const queryClient = useQueryClient();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<CategoryItem | null>(null);
+  const [form, setForm] = useState<CategoryFormState>(defaultForm);
+  const [formError, setFormError] = useState("");
+  const [deleting, setDeleting] = useState<CategoryItem | null>(null);
+
   const q = useQuery({
     queryKey: ["categories"],
-    queryFn: () => apiFetch<any[]>("/categories", { auth: false }),
+    queryFn: () => apiFetch<CategoryItem[]>("/categories", { auth: false }),
   });
   const list = q.data?.data ?? [];
 
+  const saveMutation = useMutation({
+    mutationFn: (payload: { id?: string; body: Record<string, unknown> }) =>
+      apiFetch(payload.id ? `/categories/${payload.id}` : "/categories", {
+        method: payload.id ? "PATCH" : "POST",
+        body: JSON.stringify(payload.body),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["categories"] });
+      toast.success(editing ? "Cập nhật danh mục thành công" : "Tạo danh mục thành công");
+      setDialogOpen(false);
+      setEditing(null);
+      setForm(defaultForm);
+      setFormError("");
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Lưu danh mục thất bại";
+      setFormError(message);
+      toast.error(message);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/categories/${id}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["categories"] });
+      toast.success("Xóa danh mục thành công");
+      setDeleting(null);
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Xóa danh mục thất bại";
+      toast.error(message);
+    },
+  });
+
+  function getProductCount(category: CategoryItem) {
+    if (category.productCount != null) return Number(category.productCount);
+    if (category.products) return category.products.length;
+    return 0;
+  }
+
+  function openCreate() {
+    setEditing(null);
+    setForm(defaultForm);
+    setFormError("");
+    setDialogOpen(true);
+  }
+
+  function openEdit(category: CategoryItem) {
+    setEditing(category);
+    setForm({
+      name: category.name ?? "",
+      description: category.description ?? "",
+      icon: category.icon ?? category.image ?? "",
+      slug: category.slug ?? "",
+      sortOrder: String(category.sortOrder ?? 0),
+    });
+    setFormError("");
+    setDialogOpen(true);
+  }
+
+  function validateForm() {
+    if (!form.name.trim()) return "Tên danh mục là bắt buộc";
+    if (!form.description.trim()) return "Mô tả danh mục là bắt buộc";
+    if (form.sortOrder.trim()) {
+      const sortOrder = Number(form.sortOrder);
+      if (!Number.isInteger(sortOrder)) return "Thứ tự hiển thị phải là số nguyên";
+    }
+    return "";
+  }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const error = validateForm();
+    if (error) {
+      setFormError(error);
+      return;
+    }
+    const payload: Record<string, unknown> = {
+      name: form.name.trim(),
+      description: form.description.trim(),
+      icon: form.icon.trim() || undefined,
+      slug: form.slug.trim() || undefined,
+      sortOrder: form.sortOrder.trim() ? Number(form.sortOrder) : 0,
+    };
+    setFormError("");
+    saveMutation.mutate({ id: editing?.id, body: payload });
+  }
+
   return (
     <div>
-      <PageHeader title="Danh mục" subtitle={`${list.length} danh mục`} />
+      <PageHeader
+        title="Danh mục"
+        subtitle={`${list.length} danh mục`}
+        action={
+          <Button onClick={openCreate}>
+            <Plus className="size-4" />
+            Thêm danh mục
+          </Button>
+        }
+      />
 
       {q.isLoading || q.isError || list.length === 0 ? (
         <DataState loading={q.isLoading} error={q.error} empty={list.length === 0} />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          {list.map((c: any, idx: number) => (
-            <div
-              key={c.id}
-              className="rounded-2xl bg-card shadow-[var(--shadow-card)] p-4 flex flex-col items-center text-center gap-3"
-            >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          {list.map((c, idx) => {
+            const products = getProductCount(c);
+            const canDelete = products === 0;
+            return (
               <div
-                className={`size-16 rounded-2xl grid place-items-center ${PASTELS[idx % PASTELS.length]}`}
+                key={c.id}
+                className="rounded-2xl bg-card p-4 text-center shadow-[var(--shadow-card)] transition hover:shadow-md"
               >
-                {c.icon || c.image ? (
-                  <img src={c.icon ?? c.image} alt={c.name} className="size-10 object-contain" />
-                ) : (
-                  <Tag className="size-7" />
-                )}
+                <button className="w-full" onClick={() => openEdit(c)}>
+                  <div
+                    className={`mx-auto grid size-16 place-items-center rounded-2xl ${PASTELS[idx % PASTELS.length]}`}
+                  >
+                    {c.icon || c.image ? (
+                      <img
+                        src={c.icon ?? c.image ?? ""}
+                        alt={c.name}
+                        className="size-10 object-contain"
+                      />
+                    ) : (
+                      <Tag className="size-7" />
+                    )}
+                  </div>
+                  <div className="mt-3 min-w-0">
+                    <p className="truncate text-sm font-semibold">{c.name}</p>
+                    <p className="line-clamp-2 text-xs text-muted-foreground">
+                      {c.description ?? "Không có mô tả"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{products} sản phẩm</p>
+                  </div>
+                </button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-full"
+                  disabled={!canDelete || deleteMutation.isPending}
+                  onClick={() => {
+                    if (!canDelete) {
+                      toast.error("Chỉ xóa được danh mục không có sản phẩm");
+                      return;
+                    }
+                    setDeleting(c);
+                  }}
+                >
+                  <Trash2 className="size-4" />
+                  Xóa
+                </Button>
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold truncate">{c.name}</p>
-                {c.productCount != null && (
-                  <p className="text-xs text-muted-foreground">
-                    {c.productCount} sp
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editing ? "Cập nhật danh mục" : "Thêm danh mục"}</DialogTitle>
+            <DialogDescription>Điền thông tin danh mục và lưu thay đổi.</DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div className="space-y-2">
+              <Label htmlFor="category-name">Tên danh mục *</Label>
+              <Input
+                id="category-name"
+                value={form.name}
+                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="category-description">Mô tả *</Label>
+              <Textarea
+                id="category-description"
+                value={form.description}
+                onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="category-icon">Icon URL</Label>
+              <Input
+                id="category-icon"
+                value={form.icon}
+                onChange={(e) => setForm((prev) => ({ ...prev, icon: e.target.value }))}
+                placeholder="https://..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="category-slug">Slug</Label>
+                <Input
+                  id="category-slug"
+                  value={form.slug}
+                  onChange={(e) => setForm((prev) => ({ ...prev, slug: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category-order">Sort order</Label>
+                <Input
+                  id="category-order"
+                  type="number"
+                  value={form.sortOrder}
+                  onChange={(e) => setForm((prev) => ({ ...prev, sortOrder: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                Hủy
+              </Button>
+              <Button type="submit" disabled={saveMutation.isPending}>
+                {saveMutation.isPending ? "Đang lưu..." : "Lưu"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xóa danh mục?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Danh mục <strong>{deleting?.name}</strong> sẽ bị xóa khỏi hệ thống.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!deleting || deleteMutation.isPending}
+              onClick={() => deleting && deleteMutation.mutate(deleting.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? "Đang xóa..." : "Xóa"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
