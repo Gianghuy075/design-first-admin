@@ -276,92 +276,94 @@ function NewsPage() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl flex flex-col max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>{editing ? "Cập nhật bài viết" : "Viết bài mới"}</DialogTitle>
             <DialogDescription>Điền thông tin và nội dung bài viết.</DialogDescription>
           </DialogHeader>
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="grid grid-cols-2 gap-3">
+          <form className="flex flex-col flex-1 min-h-0" onSubmit={handleSubmit}>
+            <div className="overflow-y-auto flex-1 space-y-4 px-1 py-1">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="news-id">Mã bài viết</Label>
+                  <Input
+                    id="news-id"
+                    value={form.id}
+                    disabled={Boolean(editing)}
+                    onChange={(e) => setForm((prev) => ({ ...prev, id: e.target.value }))}
+                    placeholder="news-summer-sale"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="news-category">Danh mục *</Label>
+                  <select
+                    id="news-category"
+                    value={form.category}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, category: e.target.value as NewsCategory }))
+                    }
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="promo">Khuyến mãi</option>
+                    <option value="knowledge">Kiến thức</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="news-id">Mã bài viết</Label>
+                <Label htmlFor="news-title">Tiêu đề *</Label>
                 <Input
-                  id="news-id"
-                  value={form.id}
-                  disabled={Boolean(editing)}
-                  onChange={(e) => setForm((prev) => ({ ...prev, id: e.target.value }))}
-                  placeholder="news-summer-sale"
+                  id="news-title"
+                  value={form.title}
+                  onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
                 />
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="news-category">Danh mục *</Label>
-                <select
-                  id="news-category"
-                  value={form.category}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, category: e.target.value as NewsCategory }))
-                  }
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value="promo">Khuyến mãi</option>
-                  <option value="knowledge">Kiến thức</option>
-                </select>
+                <Label htmlFor="news-thumbnail">Thumbnail URL</Label>
+                <Input
+                  id="news-thumbnail"
+                  value={form.thumbnail}
+                  onChange={(e) => setForm((prev) => ({ ...prev, thumbnail: e.target.value }))}
+                  placeholder="https://..."
+                />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="news-excerpt">Excerpt</Label>
+                <Textarea
+                  id="news-excerpt"
+                  value={form.excerpt}
+                  onChange={(e) => setForm((prev) => ({ ...prev, excerpt: e.target.value }))}
+                  rows={3}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="news-content">Nội dung * (mỗi dòng là một block)</Label>
+                <Textarea
+                  id="news-content"
+                  value={form.content}
+                  onChange={(e) => setForm((prev) => ({ ...prev, content: e.target.value }))}
+                  rows={6}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="news-tag">Tag</Label>
+                <Input
+                  id="news-tag"
+                  value={form.tag}
+                  onChange={(e) => setForm((prev) => ({ ...prev, tag: e.target.value }))}
+                  placeholder="flash-sale"
+                />
+              </div>
+
+              {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="news-title">Tiêu đề *</Label>
-              <Input
-                id="news-title"
-                value={form.title}
-                onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="news-thumbnail">Thumbnail URL</Label>
-              <Input
-                id="news-thumbnail"
-                value={form.thumbnail}
-                onChange={(e) => setForm((prev) => ({ ...prev, thumbnail: e.target.value }))}
-                placeholder="https://..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="news-excerpt">Excerpt</Label>
-              <Textarea
-                id="news-excerpt"
-                value={form.excerpt}
-                onChange={(e) => setForm((prev) => ({ ...prev, excerpt: e.target.value }))}
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="news-content">Nội dung * (mỗi dòng là một block)</Label>
-              <Textarea
-                id="news-content"
-                value={form.content}
-                onChange={(e) => setForm((prev) => ({ ...prev, content: e.target.value }))}
-                rows={6}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="news-tag">Tag</Label>
-              <Input
-                id="news-tag"
-                value={form.tag}
-                onChange={(e) => setForm((prev) => ({ ...prev, tag: e.target.value }))}
-                placeholder="flash-sale"
-              />
-            </div>
-
-            {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
-
-            <DialogFooter>
+            <DialogFooter className="pt-4 border-t border-border">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 Hủy
               </Button>

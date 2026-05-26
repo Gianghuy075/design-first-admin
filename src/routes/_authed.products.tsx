@@ -53,7 +53,6 @@ type ProductItem = {
   imageUrl?: string | null;
   images?: string[] | null;
   categoryId?: string | null;
-  rank?: number | null;
 };
 
 type ProductFormState = {
@@ -64,7 +63,6 @@ type ProductFormState = {
   oldPrice: string;
   imageUrl: string;
   categoryId: string;
-  rank: string;
 };
 
 const productsSearchSchema = z.object({
@@ -81,7 +79,6 @@ const defaultForm: ProductFormState = {
   oldPrice: "",
   imageUrl: "",
   categoryId: "",
-  rank: "",
 };
 
 export const Route = createFileRoute("/_authed/products")({
@@ -180,7 +177,6 @@ function ProductsPage() {
       oldPrice: product.oldPrice == null ? "" : String(product.oldPrice),
       imageUrl: product.imageUrl ?? product.image ?? product.images?.[0] ?? "",
       categoryId: product.categoryId ?? "",
-      rank: product.rank == null ? "" : String(product.rank),
     });
     setFormError("");
     setDialogOpen(true);
@@ -198,10 +194,6 @@ function ProductsPage() {
     if (form.oldPrice.trim()) {
       const oldPrice = Number(form.oldPrice);
       if (!Number.isFinite(oldPrice) || oldPrice < 0) return "Giá cũ không hợp lệ";
-    }
-    if (form.rank.trim()) {
-      const rank = Number(form.rank);
-      if (!Number.isInteger(rank) || rank < 0) return "Thứ hạng phải là số nguyên không âm";
     }
     return "";
   }
@@ -222,7 +214,6 @@ function ProductsPage() {
       oldPrice: form.oldPrice.trim() ? Number(form.oldPrice) : undefined,
       imageUrl: form.imageUrl.trim() || undefined,
       categoryId: form.categoryId || undefined,
-      rank: form.rank.trim() ? Number(form.rank) : undefined,
     };
     setFormError("");
     saveMutation.mutate({ id: editing?.id, body: payload });
@@ -316,9 +307,6 @@ function ProductsPage() {
                     <p className="min-h-[2.5rem] text-sm font-medium line-clamp-2">{p.name}</p>
                     <div className="mt-auto flex items-baseline justify-between gap-2 pt-2">
                       <span className="text-base font-bold text-primary">{formatVnd(p.price)}</span>
-                      {p.rank != null ? (
-                        <span className="text-xs text-muted-foreground">#{p.rank}</span>
-                      ) : null}
                     </div>
                     <p className="text-xs text-muted-foreground">Tồn kho: {p.stock ?? 0}</p>
                     <div className="mt-3 flex gap-2">
@@ -413,33 +401,21 @@ function ProductsPage() {
               ) : null}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="product-category">Danh mục</Label>
-                <select
-                  id="product-category"
-                  value={form.categoryId}
-                  onChange={(e) => setForm((prev) => ({ ...prev, categoryId: e.target.value }))}
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value="">Không chọn</option>
-                  {(categories.data?.data ?? []).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="product-rank">Thứ hạng</Label>
-                <Input
-                  id="product-rank"
-                  type="number"
-                  min={0}
-                  value={form.rank}
-                  onChange={(e) => setForm((prev) => ({ ...prev, rank: e.target.value }))}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="product-category">Danh mục</Label>
+              <select
+                id="product-category"
+                value={form.categoryId}
+                onChange={(e) => setForm((prev) => ({ ...prev, categoryId: e.target.value }))}
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">Không chọn</option>
+                {(categories.data?.data ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">
@@ -508,7 +484,7 @@ function Pagination({ page, totalPages }: { page: number; totalPages: number }) 
       <Link
         from={Route.fullPath}
         search={(prev: ProductsSearch) => ({ ...prev, page: Math.max(1, page - 1) })}
-        className="h-9 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-muted aria-disabled:pointer-events-none aria-disabled:opacity-50"
+        className="inline-flex h-9 items-center rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-muted aria-disabled:pointer-events-none aria-disabled:opacity-50"
         aria-disabled={page === 1}
       >
         Trước
@@ -536,7 +512,7 @@ function Pagination({ page, totalPages }: { page: number; totalPages: number }) 
       <Link
         from={Route.fullPath}
         search={(prev: ProductsSearch) => ({ ...prev, page: Math.min(totalPages, page + 1) })}
-        className="h-9 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-muted aria-disabled:pointer-events-none aria-disabled:opacity-50"
+        className="inline-flex h-9 items-center rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-muted aria-disabled:pointer-events-none aria-disabled:opacity-50"
         aria-disabled={page >= totalPages}
       >
         Sau

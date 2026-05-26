@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-type PrizeType = "voucher" | "points" | "turns" | "product" | "miss";
+type PrizeType = "voucher" | "points" | "turns" | "miss";
 
 type WheelPrize = {
   id: string;
@@ -40,8 +40,12 @@ type WheelPrize = {
   probability: number;
   value?: number | null;
   voucherId?: string | null;
-  sortOrder?: number | null;
   isActive?: boolean | null;
+};
+
+type VoucherOption = {
+  id: string;
+  title?: string | null;
 };
 
 type WheelHistoryItem = {
@@ -60,7 +64,6 @@ type PrizeFormState = {
   probability: string;
   value: string;
   voucherId: string;
-  sortOrder: string;
   isActive: boolean;
 };
 
@@ -70,7 +73,6 @@ const defaultForm: PrizeFormState = {
   probability: "",
   value: "",
   voucherId: "",
-  sortOrder: "0",
   isActive: true,
 };
 
@@ -78,7 +80,6 @@ const TYPE_LABEL: Record<PrizeType, string> = {
   voucher: "Voucher",
   points: "Điểm",
   turns: "Lượt quay",
-  product: "Sản phẩm",
   miss: "Chúc may mắn lần sau",
 };
 
@@ -102,6 +103,12 @@ function WheelPage() {
     queryKey: ["wheel-admin-prizes"],
     queryFn: () => apiFetch<WheelPrize[]>("/wheel/admin/prizes"),
   });
+
+  const vouchers = useQuery({
+    queryKey: ["vouchers"],
+    queryFn: () => apiFetch<VoucherOption[]>("/vouchers"),
+  });
+  const voucherList = vouchers.data?.data ?? [];
 
   const history = useQuery({
     queryKey: ["wheel-history"],
@@ -171,7 +178,6 @@ function WheelPage() {
       probability: String(prize.probability ?? ""),
       value: prize.value == null ? "" : String(prize.value),
       voucherId: prize.voucherId ?? "",
-      sortOrder: String(prize.sortOrder ?? 0),
       isActive: prize.isActive ?? true,
     });
     setFormError("");
@@ -187,10 +193,6 @@ function WheelPage() {
     if (form.value.trim()) {
       const value = Number(form.value);
       if (!Number.isFinite(value) || value < 0) return "Giá trị thưởng không hợp lệ";
-    }
-    if (form.sortOrder.trim()) {
-      const sortOrder = Number(form.sortOrder);
-      if (!Number.isInteger(sortOrder)) return "Sort order phải là số nguyên";
     }
     if (form.type === "voucher" && !form.voucherId.trim())
       return "Voucher ID là bắt buộc cho phần thưởng voucher";
@@ -231,7 +233,6 @@ function WheelPage() {
       probability,
       value: form.value.trim() ? Number(form.value) : undefined,
       voucherId: form.voucherId.trim() || undefined,
-      sortOrder: form.sortOrder.trim() ? Number(form.sortOrder) : 0,
       isActive: form.isActive,
     };
 
@@ -384,7 +385,6 @@ function WheelPage() {
                   <option value="points">Điểm</option>
                   <option value="turns">Lượt quay</option>
                   <option value="voucher">Voucher</option>
-                  <option value="product">Sản phẩm</option>
                   <option value="miss">Chúc may mắn</option>
                 </select>
               </div>
@@ -414,37 +414,32 @@ function WheelPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="prize-voucher">Voucher ID</Label>
-                <Input
+                <Label htmlFor="prize-voucher">Voucher</Label>
+                <select
                   id="prize-voucher"
                   value={form.voucherId}
+                  disabled={form.type !== "voucher"}
                   onChange={(e) => setForm((prev) => ({ ...prev, voucherId: e.target.value }))}
-                  placeholder="Chỉ dùng khi type = voucher"
-                />
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm disabled:opacity-50"
+                >
+                  <option value="">— Chọn voucher —</option>
+                  {voucherList.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.id}{v.title ? ` — ${v.title}` : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="prize-sort-order">Sort order</Label>
-                <Input
-                  id="prize-sort-order"
-                  type="number"
-                  value={form.sortOrder}
-                  onChange={(e) => setForm((prev) => ({ ...prev, sortOrder: e.target.value }))}
-                />
-              </div>
-              <div className="flex items-end">
-                <div className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-sm">
-                  <span>Kích hoạt</span>
-                  <Switch
-                    checked={form.isActive}
-                    onCheckedChange={(checked) =>
-                      setForm((prev) => ({ ...prev, isActive: checked }))
-                    }
-                  />
-                </div>
-              </div>
+            <div className="flex h-9 items-center justify-between rounded-md border border-input bg-background px-3 text-sm">
+              <span>Kích hoạt</span>
+              <Switch
+                checked={form.isActive}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
             </div>
 
             {formError ? <p className="text-sm text-destructive">{formError}</p> : null}

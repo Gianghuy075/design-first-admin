@@ -35,7 +35,6 @@ type CategoryItem = {
   icon?: string | null;
   image?: string | null;
   slug?: string | null;
-  sortOrder?: number | null;
   productCount?: number | null;
   products?: unknown[] | null;
 };
@@ -45,7 +44,6 @@ type CategoryFormState = {
   description: string;
   icon: string;
   slug: string;
-  sortOrder: string;
 };
 
 const defaultForm: CategoryFormState = {
@@ -53,8 +51,33 @@ const defaultForm: CategoryFormState = {
   description: "",
   icon: "",
   slug: "",
-  sortOrder: "0",
 };
+
+const VI_MAP: Record<string, string> = {
+  à: "a", á: "a", ả: "a", ã: "a", ạ: "a",
+  ă: "a", ằ: "a", ắ: "a", ẳ: "a", ẵ: "a", ặ: "a",
+  â: "a", ầ: "a", ấ: "a", ẩ: "a", ẫ: "a", ậ: "a",
+  è: "e", é: "e", ẻ: "e", ẽ: "e", ẹ: "e",
+  ê: "e", ề: "e", ế: "e", ể: "e", ễ: "e", ệ: "e",
+  ì: "i", í: "i", ỉ: "i", ĩ: "i", ị: "i",
+  ò: "o", ó: "o", ỏ: "o", õ: "o", ọ: "o",
+  ô: "o", ồ: "o", ố: "o", ổ: "o", ỗ: "o", ộ: "o",
+  ơ: "o", ờ: "o", ớ: "o", ở: "o", ỡ: "o", ợ: "o",
+  ù: "u", ú: "u", ủ: "u", ũ: "u", ụ: "u",
+  ư: "u", ừ: "u", ứ: "u", ử: "u", ữ: "u", ự: "u",
+  ỳ: "y", ý: "y", ỷ: "y", ỹ: "y", ỵ: "y",
+  đ: "d",
+};
+
+function toSlug(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/g, (c) => VI_MAP[c] ?? c)
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
 
 const PASTELS = [
   "bg-orange-100 text-orange-700",
@@ -77,6 +100,7 @@ function CategoriesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CategoryItem | null>(null);
   const [form, setForm] = useState<CategoryFormState>(defaultForm);
+  const [slugTouched, setSlugTouched] = useState(false);
   const [formError, setFormError] = useState("");
   const [deleting, setDeleting] = useState<CategoryItem | null>(null);
 
@@ -132,6 +156,7 @@ function CategoriesPage() {
   function openCreate() {
     setEditing(null);
     setForm(defaultForm);
+    setSlugTouched(false);
     setFormError("");
     setDialogOpen(true);
   }
@@ -143,8 +168,8 @@ function CategoriesPage() {
       description: category.description ?? "",
       icon: category.icon ?? category.image ?? "",
       slug: category.slug ?? "",
-      sortOrder: String(category.sortOrder ?? 0),
     });
+    setSlugTouched(true);
     setFormError("");
     setDialogOpen(true);
   }
@@ -152,10 +177,6 @@ function CategoriesPage() {
   function validateForm() {
     if (!form.name.trim()) return "Tên danh mục là bắt buộc";
     if (!form.description.trim()) return "Mô tả danh mục là bắt buộc";
-    if (form.sortOrder.trim()) {
-      const sortOrder = Number(form.sortOrder);
-      if (!Number.isInteger(sortOrder)) return "Thứ tự hiển thị phải là số nguyên";
-    }
     return "";
   }
 
@@ -171,7 +192,6 @@ function CategoriesPage() {
       description: form.description.trim(),
       icon: form.icon.trim() || undefined,
       slug: form.slug.trim() || undefined,
-      sortOrder: form.sortOrder.trim() ? Number(form.sortOrder) : 0,
     };
     setFormError("");
     saveMutation.mutate({ id: editing?.id, body: payload });
@@ -258,7 +278,14 @@ function CategoriesPage() {
               <Input
                 id="category-name"
                 value={form.name}
-                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => {
+                  const name = e.target.value;
+                  setForm((prev) => ({
+                    ...prev,
+                    name,
+                    slug: slugTouched ? prev.slug : toSlug(name),
+                  }));
+                }}
               />
             </div>
             <div className="space-y-2">
@@ -279,24 +306,18 @@ function CategoriesPage() {
                 placeholder="https://..."
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="category-slug">Slug</Label>
-                <Input
-                  id="category-slug"
-                  value={form.slug}
-                  onChange={(e) => setForm((prev) => ({ ...prev, slug: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="category-order">Sort order</Label>
-                <Input
-                  id="category-order"
-                  type="number"
-                  value={form.sortOrder}
-                  onChange={(e) => setForm((prev) => ({ ...prev, sortOrder: e.target.value }))}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="category-slug">
+                Slug{!slugTouched && !editing && <span className="ml-1 text-xs text-muted-foreground">(tự động)</span>}
+              </Label>
+              <Input
+                id="category-slug"
+                value={form.slug}
+                onChange={(e) => {
+                  setSlugTouched(true);
+                  setForm((prev) => ({ ...prev, slug: e.target.value }));
+                }}
+              />
             </div>
 
             {formError ? <p className="text-sm text-destructive">{formError}</p> : null}

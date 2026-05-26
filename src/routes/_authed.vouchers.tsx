@@ -312,7 +312,7 @@ function VouchersPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="voucher-total-limit">Tổng lượt dùng</Label>
+                <Label htmlFor="voucher-total-limit">Giới hạn sử dụng <span className="text-xs text-muted-foreground font-normal">(để trống = không giới hạn)</span></Label>
                 <Input
                   id="voucher-total-limit"
                   type="number"

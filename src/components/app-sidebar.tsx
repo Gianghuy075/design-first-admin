@@ -50,7 +50,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-2">
+        <div className="flex items-center gap-2 px-2 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
           <div className="size-9 rounded-xl bg-primary text-primary-foreground grid place-items-center shrink-0">
             <ShoppingBag className="size-5" />
           </div>

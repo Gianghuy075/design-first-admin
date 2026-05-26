@@ -11,6 +11,27 @@ export const Route = createFileRoute("/_authed/")({
   component: DashboardPage,
 });
 
+type AdminStats = {
+  counts: {
+    products: number;
+    categories: number;
+    orders: number;
+    users: number;
+    vouchers: number;
+  };
+  totalRevenue: number;
+  recentOrders: {
+    id: string;
+    status: string;
+    total: number;
+    payMethod: string | null;
+    createdAt: string;
+  }[];
+  ordersByStatus: { status: string; count: number }[];
+  revenueByDay: { date: string; total: number; count: number }[];
+  topProducts: { productId: string; name: string; qty: number; revenue: number }[];
+};
+
 function StatCard({
   label,
   value,
@@ -20,16 +41,17 @@ function StatCard({
   label: string;
   value: string | number;
   icon: React.ComponentType<{ className?: string }>;
-  tone?: "orange" | "navy" | "hero" | "green";
+  tone?: "orange" | "navy" | "hero" | "green" | "purple";
 }) {
   const tones: Record<string, string> = {
     orange: "bg-primary/10 text-primary",
     navy: "bg-secondary text-secondary-foreground",
     hero: "bg-accent text-accent-foreground",
     green: "bg-emerald-100 text-emerald-700",
+    purple: "bg-purple-100 text-purple-700",
   };
   return (
-    <div className="rounded-2xl bg-card shadow-[var(--shadow-card)] p-5 flex items-center gap-4">
+    <div className="rounded-2xl bg-card shadow-(--shadow-card) p-5 flex items-center gap-4">
       <div className={`size-12 rounded-xl grid place-items-center ${tones[tone]}`}>
         <Icon className="size-6" />
       </div>
@@ -62,42 +84,17 @@ const STATUS_TONE: Record<string, string> = {
 };
 
 function DashboardPage() {
-  const products = useQuery({
-    queryKey: ["products", { limit: 1 }],
-    queryFn: () => apiFetch<unknown[]>("/products", { auth: false, query: { limit: 1 } }),
-  });
-  const categories = useQuery({
-    queryKey: ["categories"],
-    queryFn: () => apiFetch<unknown[]>("/categories", { auth: false }),
-  });
-  const orders = useQuery({
-    queryKey: ["orders"],
-    queryFn: () => apiFetch<any[]>("/orders"),
-  });
-  const vouchers = useQuery({
-    queryKey: ["vouchers"],
-    queryFn: () => apiFetch<any[]>("/vouchers"),
+  const stats = useQuery({
+    queryKey: ["admin-stats"],
+    queryFn: () => apiFetch<AdminStats>("/admin/stats"),
   });
   const me = useQuery({
     queryKey: ["me"],
     queryFn: () => apiFetch<any>("/auth/me"),
   });
-  const topProducts = useQuery({
-    queryKey: ["products-top"],
-    queryFn: () => apiFetch<any[]>("/products/top", { auth: false }),
-  });
 
-  const totalProducts = products.data?.meta?.total ?? products.data?.data?.length ?? 0;
-  const totalCategories = categories.data?.data?.length ?? 0;
-  const totalOrders = orders.data?.data?.length ?? 0;
-  const totalVouchers = vouchers.data?.data?.length ?? 0;
-  const revenue = (orders.data?.data ?? []).reduce(
-    (sum: number, o: any) => sum + Number(o.total ?? 0),
-    0,
-  );
-  const recent = (orders.data?.data ?? []).slice(0, 6);
-  const allOrders = orders.data?.data ?? [];
-  const allTopProducts = topProducts.data?.data ?? [];
+  const s = stats.data?.data;
+  const counts = s?.counts;
   const meData = me.data?.data;
   const displayName = meData?.username?.trim() || meData?.name?.trim() || "";
   const accountIdentifier = meData?.username?.trim() || "—";
@@ -109,23 +106,24 @@ function DashboardPage() {
         subtitle="Tổng quan hoạt động của HappyMall"
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Sản phẩm" value={totalProducts} icon={Package} tone="orange" />
-        <StatCard label="Danh mục" value={totalCategories} icon={Tag} tone="navy" />
-        <StatCard label="Đơn hàng" value={totalOrders} icon={ShoppingCart} tone="hero" />
-        <StatCard label="Voucher" value={totalVouchers} icon={Ticket} tone="green" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <StatCard label="Sản phẩm" value={counts?.products ?? "—"} icon={Package} tone="orange" />
+        <StatCard label="Danh mục" value={counts?.categories ?? "—"} icon={Tag} tone="navy" />
+        <StatCard label="Đơn hàng" value={counts?.orders ?? "—"} icon={ShoppingCart} tone="hero" />
+        <StatCard label="Voucher" value={counts?.vouchers ?? "—"} icon={Ticket} tone="green" />
+        <StatCard label="Người dùng" value={counts?.users ?? "—"} icon={Users} tone="purple" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div className="rounded-2xl bg-gradient-to-br from-primary to-orange-400 text-primary-foreground p-6 shadow-[var(--shadow-card)] lg:col-span-2">
+        <div className="rounded-2xl bg-linear-to-br from-primary to-orange-400 text-primary-foreground p-6 shadow-(--shadow-card) lg:col-span-2">
           <div className="flex items-center gap-2 text-sm opacity-90">
             <TrendingUp className="size-4" />
-            Doanh thu đơn hàng (toàn bộ)
+            Doanh thu (không tính đơn hủy / hoàn trả)
           </div>
-          <p className="text-4xl font-bold mt-2">{formatVnd(revenue)}</p>
-          <p className="text-sm opacity-90 mt-1">Tổng từ {totalOrders} đơn hàng đã ghi nhận</p>
+          <p className="text-4xl font-bold mt-2">{formatVnd(s?.totalRevenue ?? 0)}</p>
+          <p className="text-sm opacity-90 mt-1">Tổng từ {counts?.orders ?? 0} đơn đã ghi nhận</p>
         </div>
-        <div className="rounded-2xl bg-sidebar text-sidebar-foreground p-6 shadow-[var(--shadow-card)]">
+        <div className="rounded-2xl bg-sidebar text-sidebar-foreground p-6 shadow-(--shadow-card)">
           <div className="flex items-center gap-2 text-sm opacity-90">
             <Users className="size-4" />
             Tài khoản
@@ -136,21 +134,21 @@ function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <RevenueChart orders={allOrders} />
-        <StatusChart orders={allOrders} />
-        <TopProductsChart orders={allOrders} products={allTopProducts} />
+        <RevenueChart data={s?.revenueByDay ?? []} />
+        <StatusChart data={s?.ordersByStatus ?? []} total={counts?.orders ?? 0} />
+        <TopProductsChart data={s?.topProducts ?? []} />
       </div>
 
-      <div className="rounded-2xl bg-card shadow-[var(--shadow-card)] overflow-hidden">
+      <div className="rounded-2xl bg-card shadow-(--shadow-card) overflow-hidden">
         <div className="px-6 py-4 border-b border-border">
           <h2 className="font-semibold">Đơn hàng gần đây</h2>
         </div>
-        {orders.isLoading || orders.isError || recent.length === 0 ? (
+        {stats.isLoading || stats.isError || (s?.recentOrders.length ?? 0) === 0 ? (
           <div className="p-6">
             <DataState
-              loading={orders.isLoading}
-              error={orders.error}
-              empty={recent.length === 0}
+              loading={stats.isLoading}
+              error={stats.error}
+              empty={(s?.recentOrders.length ?? 0) === 0}
               emptyText="Chưa có đơn hàng"
             />
           </div>
@@ -166,9 +164,9 @@ function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {recent.map((o: any) => (
+                {(s?.recentOrders ?? []).map((o) => (
                   <tr key={o.id} className="border-t border-border">
-                    <td className="px-6 py-3 font-medium">{o.code ?? o.id}</td>
+                    <td className="px-6 py-3 font-medium">{o.id}</td>
                     <td className="px-6 py-3">
                       <span
                         className={`inline-flex px-2 py-1 rounded-md text-xs font-medium ${

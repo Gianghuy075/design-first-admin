@@ -59,32 +59,16 @@ function ChartCard({
 
 function Empty({ text }: { text: string }) {
   return (
-    <div className="h-full grid place-items-center text-sm text-muted-foreground">
-      {text}
-    </div>
+    <div className="h-full grid place-items-center text-sm text-muted-foreground">{text}</div>
   );
 }
 
-export function RevenueChart({ orders }: { orders: any[] }) {
-  // Aggregate revenue per day (last 14 days from latest order)
-  const map = new Map<string, { date: string; revenue: number; orders: number }>();
-  orders.forEach((o) => {
-    if (!o.createdAt) return;
-    const d = new Date(o.createdAt);
-    if (Number.isNaN(d.getTime())) return;
-    const key = d.toISOString().slice(0, 10);
-    const cur = map.get(key) ?? { date: key, revenue: 0, orders: 0 };
-    cur.revenue += Number(o.total ?? 0);
-    cur.orders += 1;
-    map.set(key, cur);
-  });
-  const data = Array.from(map.values())
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(-14)
-    .map((d) => ({
-      ...d,
-      label: new Date(d.date).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" }),
-    }));
+export function RevenueChart({ data }: { data: { date: string; total: number; count: number }[] }) {
+  const chartData = data.map((d) => ({
+    ...d,
+    total: Number(d.total),
+    label: new Date(d.date).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" }),
+  }));
 
   return (
     <ChartCard
@@ -92,11 +76,11 @@ export function RevenueChart({ orders }: { orders: any[] }) {
       subtitle="14 ngày gần nhất có đơn"
       className="lg:col-span-2"
     >
-      {data.length === 0 ? (
+      {chartData.length === 0 ? (
         <Empty text="Chưa có dữ liệu doanh thu" />
       ) : (
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--brand-orange)" stopOpacity={0.4} />
@@ -108,21 +92,23 @@ export function RevenueChart({ orders }: { orders: any[] }) {
             <YAxis
               tick={{ fontSize: 11 }}
               stroke="rgb(0 0 0 / 0.4)"
-              tickFormatter={(v) => (v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}tr` : v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
+              tickFormatter={(v) =>
+                v >= 1_000_000
+                  ? `${(v / 1_000_000).toFixed(1)}tr`
+                  : v >= 1000
+                    ? `${(v / 1000).toFixed(0)}k`
+                    : String(v)
+              }
             />
             <Tooltip
-              contentStyle={{
-                borderRadius: 12,
-                border: "1px solid rgb(0 0 0 / 0.08)",
-                fontSize: 12,
-              }}
+              contentStyle={{ borderRadius: 12, border: "1px solid rgb(0 0 0 / 0.08)", fontSize: 12 }}
               formatter={(v: any, name) =>
-                name === "revenue" ? [formatVnd(v as number), "Doanh thu"] : [v, "Đơn"]
+                name === "total" ? [formatVnd(v as number), "Doanh thu"] : [v, "Đơn"]
               }
             />
             <Area
               type="monotone"
-              dataKey="revenue"
+              dataKey="total"
               stroke="var(--brand-orange)"
               strokeWidth={2.5}
               fill="url(#revFill)"
@@ -134,27 +120,28 @@ export function RevenueChart({ orders }: { orders: any[] }) {
   );
 }
 
-export function StatusChart({ orders }: { orders: any[] }) {
-  const counts = new Map<string, number>();
-  orders.forEach((o) => {
-    const s = o.status ?? "unknown";
-    counts.set(s, (counts.get(s) ?? 0) + 1);
-  });
-  const data = Array.from(counts.entries()).map(([status, value]) => ({
-    status,
-    name: STATUS_LABEL[status] ?? status,
-    value,
+export function StatusChart({
+  data,
+  total,
+}: {
+  data: { status: string; count: number }[];
+  total: number;
+}) {
+  const chartData = data.map((d) => ({
+    status: d.status,
+    name: STATUS_LABEL[d.status] ?? d.status,
+    value: Number(d.count),
   }));
 
   return (
-    <ChartCard title="Đơn theo trạng thái" subtitle={`${orders.length} đơn tổng`}>
-      {data.length === 0 ? (
+    <ChartCard title="Đơn theo trạng thái" subtitle={`${total} đơn tổng`}>
+      {chartData.length === 0 ? (
         <Empty text="Chưa có đơn hàng" />
       ) : (
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={data}
+              data={chartData}
               dataKey="value"
               nameKey="name"
               cx="50%"
@@ -163,7 +150,7 @@ export function StatusChart({ orders }: { orders: any[] }) {
               outerRadius={75}
               paddingAngle={2}
             >
-              {data.map((d) => (
+              {chartData.map((d) => (
                 <Cell key={d.status} fill={STATUS_COLORS[d.status] ?? "#94a3b8"} />
               ))}
             </Pie>
@@ -185,50 +172,33 @@ export function StatusChart({ orders }: { orders: any[] }) {
 }
 
 export function TopProductsChart({
-  orders,
-  products,
+  data,
 }: {
-  orders: any[];
-  products: any[];
+  data: { productId: string; name: string; qty: number; revenue: number }[];
 }) {
-  const productMap = new Map<string, string>();
-  products.forEach((p) => productMap.set(p.id, p.name));
-
-  const tally = new Map<string, { name: string; qty: number; revenue: number }>();
-  orders.forEach((o) => {
-    (o.items ?? []).forEach((it: any) => {
-      const id = it.productId ?? it.product?.id;
-      if (!id) return;
-      const name = it.product?.name ?? productMap.get(id) ?? it.name ?? id;
-      const qty = Number(it.qty ?? it.quantity ?? 0);
-      const price = Number(it.price ?? it.product?.price ?? 0);
-      const cur = tally.get(id) ?? { name, qty: 0, revenue: 0 };
-      cur.qty += qty;
-      cur.revenue += qty * price;
-      tally.set(id, cur);
-    });
-  });
-
-  const data = Array.from(tally.values())
-    .sort((a, b) => b.qty - a.qty)
-    .slice(0, 7)
-    .map((d) => ({
-      ...d,
-      shortName: d.name.length > 22 ? d.name.slice(0, 22) + "…" : d.name,
-    }));
+  const chartData = data.map((d) => ({
+    ...d,
+    qty: Number(d.qty),
+    revenue: Number(d.revenue),
+    shortName: d.name.length > 22 ? d.name.slice(0, 22) + "…" : d.name,
+  }));
 
   return (
-    <ChartCard
-      title="Sản phẩm bán chạy"
-      subtitle="Top 7 theo số lượng"
-      className="lg:col-span-3"
-    >
-      {data.length === 0 ? (
+    <ChartCard title="Sản phẩm bán chạy" subtitle="Top 7 theo số lượng" className="lg:col-span-3">
+      {chartData.length === 0 ? (
         <Empty text="Chưa có dữ liệu bán hàng" />
       ) : (
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} layout="vertical" margin={{ top: 5, right: 16, left: 8, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgb(0 0 0 / 0.06)" horizontal={false} />
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={{ top: 5, right: 16, left: 8, bottom: 0 }}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="rgb(0 0 0 / 0.06)"
+              horizontal={false}
+            />
             <XAxis type="number" tick={{ fontSize: 11 }} stroke="rgb(0 0 0 / 0.4)" />
             <YAxis
               type="category"
