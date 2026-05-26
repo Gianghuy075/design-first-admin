@@ -17,8 +17,6 @@ RUN npm run build
 
 FROM node:22-slim AS runner
 
-RUN apt-get update && apt-get install -y --no-install-recommends tini && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
 RUN --mount=type=cache,target=/root/.npm \
@@ -29,5 +27,4 @@ COPY --from=builder /app/wrangler.jsonc ./
 
 EXPOSE 4000
 
-ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["wrangler", "dev", "--local", "dist/server/index.js", "--port", "4000"]
