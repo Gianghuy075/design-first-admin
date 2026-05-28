@@ -1,8 +1,5 @@
 const DEFAULT_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:3000/api";
-export const API_BASE =
-  typeof window !== "undefined"
-    ? (localStorage.getItem("hm_api_base") || DEFAULT_BASE).replace(/\/$/, "")
-    : DEFAULT_BASE;
+export const API_BASE = DEFAULT_BASE.replace(/\/$/, "");
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -13,11 +10,6 @@ export function setToken(token: string | null) {
   if (typeof window === "undefined") return;
   if (token) localStorage.setItem("hm_token", token);
   else localStorage.removeItem("hm_token");
-}
-
-export function setApiBase(url: string) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem("hm_api_base", url);
 }
 
 export interface ApiResponse<T> {
@@ -33,8 +25,7 @@ export async function apiFetch<T = unknown>(
   options: RequestInit & { auth?: boolean; query?: Record<string, string | number | boolean | undefined> } = {},
 ): Promise<ApiResponse<T>> {
   const { auth = true, query, headers, ...rest } = options;
-  const base = (typeof window !== "undefined" && localStorage.getItem("hm_api_base")) || API_BASE;
-  let url = base.replace(/\/$/, "") + path;
+  let url = API_BASE + path;
   if (query) {
     const qs = Object.entries(query)
       .filter(([, v]) => v !== undefined && v !== "" && v !== null)

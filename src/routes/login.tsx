@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { setToken, setApiBase, getToken, apiFetch, API_BASE } from "@/lib/api";
+import { setToken, getToken, apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,25 +13,19 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [apiUrl, setApiUrl] = useState(API_BASE);
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("admjnad123");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("hm_api_base");
-      if (stored) setApiUrl(stored);
-      if (getToken()) navigate({ to: "/" });
-    }
+    if (getToken()) navigate({ to: "/" });
   }, [navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    setApiBase(apiUrl.trim());
     try {
       const res = await apiFetch<any>("/auth/login", {
         method: "POST",
@@ -79,16 +73,6 @@ function LoginPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="api">API URL</Label>
-            <Input
-              id="api"
-              value={apiUrl}
-              onChange={(e) => setApiUrl(e.target.value)}
-              placeholder="http://localhost:3000/api"
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="username">Tài khoản</Label>
             <Input
               id="username"
@@ -119,7 +103,7 @@ function LoginPage() {
             </div>
           )}
 
-          <Button type="submit" disabled={loading} className="w-full h-11 rounded-lg shadow-[var(--shadow-button)]">
+          <Button type="submit" disabled={loading} className="w-full h-11 rounded-lg shadow-(--shadow-button)">
             {loading ? "Đang kiểm tra..." : "Vào dashboard"}
           </Button>
         </form>
