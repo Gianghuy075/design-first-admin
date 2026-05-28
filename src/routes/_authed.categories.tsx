@@ -248,14 +248,8 @@ function CategoriesPage() {
                   variant="outline"
                   size="sm"
                   className="mt-3 w-full"
-                  disabled={!canDelete || deleteMutation.isPending}
-                  onClick={() => {
-                    if (!canDelete) {
-                      toast.error("Chỉ xóa được danh mục không có sản phẩm");
-                      return;
-                    }
-                    setDeleting(c);
-                  }}
+                  disabled={deleteMutation.isPending}
+                  onClick={() => setDeleting(c)}
                 >
                   <Trash2 className="size-4" />
                   Xóa
@@ -338,8 +332,17 @@ function CategoriesPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Xóa danh mục?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Danh mục <strong>{deleting?.name}</strong> sẽ bị xóa khỏi hệ thống.
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  Danh mục <strong>{deleting?.name}</strong> sẽ bị xóa khỏi hệ thống.
+                </p>
+                {deleting && getProductCount(deleting) > 0 && (
+                  <p className="text-amber-600 font-medium">
+                    Cảnh báo: danh mục này đang có {getProductCount(deleting)} sản phẩm. Các sản phẩm đó sẽ không còn thuộc danh mục nào sau khi xóa.
+                  </p>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
