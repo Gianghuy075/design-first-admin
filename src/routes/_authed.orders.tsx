@@ -46,7 +46,7 @@ type OrderRow = {
 };
 
 export const Route = createFileRoute("/_authed/orders")({
-  head: () => ({ meta: [{ title: "Đơn hàng — HappyMall Admin" }] }),
+  head: () => ({ meta: [{ title: "Đơn hàng Online — HappyMall Admin" }] }),
   validateSearch: zodValidator(ordersSearchSchema),
   component: OrdersPage,
 });
@@ -143,11 +143,11 @@ function OrdersPage() {
   return (
     <div>
       <PageHeader
-        title="Đơn hàng"
+        title="Đơn hàng Online"
         subtitle={
           q
-            ? `Hiển thị ${list.length} / ${pageOrders.length} đơn (trang ${safePage}) • Tổng ${total} đơn`
-            : `Tổng ${total} đơn hàng`
+            ? `Hiển thị ${list.length} / ${pageOrders.length} đơn online (trang ${safePage}) • Tổng ${total} đơn`
+            : `Tổng ${total} đơn hàng online`
         }
       />
 
@@ -201,7 +201,7 @@ function OrdersPage() {
           loading={query.isLoading}
           error={query.error}
           empty={list.length === 0}
-          emptyText="Không có đơn hàng"
+          emptyText="Không có đơn hàng online"
         />
       ) : (
         <>

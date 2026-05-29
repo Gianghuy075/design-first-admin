@@ -16,6 +16,7 @@ import { formatVnd } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -344,56 +345,40 @@ function ProductsPage() {
         />
       ) : (
         <>
-          <div className={`grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 transition-opacity duration-200 ${isFetching ? "opacity-40 pointer-events-none" : "opacity-100"}`}>
-            {list.map((p) => {
-              const preview = p.imageUrl ?? p.images?.[0];
-              return (
-                <div
-                  key={p.id}
-                  className="flex flex-col overflow-hidden rounded-2xl bg-card shadow-[var(--shadow-card)]"
-                >
-                  <div className="aspect-square overflow-hidden bg-muted">
-                    {preview ? (
-                      <img
-                        src={preview}
-                        alt={p.name}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="grid h-full w-full place-items-center text-muted-foreground">
-                        <Package className="size-8" />
+          <div className={`transition-opacity duration-200 ${isFetching ? "opacity-40 pointer-events-none" : "opacity-100"}`}>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tên sản phẩm</TableHead>
+                  <TableHead>Danh mục</TableHead>
+                  <TableHead>Còn hàng</TableHead>
+                  <TableHead>Giá</TableHead>
+                  <TableHead>Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {list.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{p.name}</TableCell>
+                    <TableCell>
+                      {categories.data?.data?.find((c) => c.id === p.categoryId)?.name ?? "—"}
+                    </TableCell>
+                    <TableCell>{p.stock ?? 0}</TableCell>
+                    <TableCell className="font-bold">{formatVnd(p.price)}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
+                          Sửa
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => setDeleting(p)}>
+                          Xóa
+                        </Button>
                       </div>
-                    )}
-                  </div>
-                  <div className="flex flex-1 flex-col p-3">
-                    <p className="min-h-[2.5rem] text-sm font-medium line-clamp-2">{p.name}</p>
-                    <div className="mt-auto flex items-baseline justify-between gap-2 pt-2">
-                      <span className="text-base font-bold text-primary">{formatVnd(p.price)}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Tồn kho: {p.stock ?? 0}</p>
-                    <div className="mt-3 flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => openEdit(p)}
-                      >
-                        Sửa
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="flex-1"
-                        onClick={() => setDeleting(p)}
-                      >
-                        Xóa
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
 
           <Pagination page={page} totalPages={totalPages} />

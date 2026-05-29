@@ -1,8 +1,8 @@
+import { useEffect, useState } from "react";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   Package,
-  Tag,
   ShoppingCart,
   Ticket,
   Gift,
@@ -10,6 +10,7 @@ import {
   LogOut,
   ShoppingBag,
   Users,
+  ChevronDown,
 } from "lucide-react";
 import {
   Sidebar,
@@ -22,14 +23,28 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { setToken } from "@/lib/api";
+
+const productItems = [
+  { title: "Danh mục", url: "/categories" },
+  { title: "Sản phẩm", url: "/products" },
+  { title: "Đánh giá", url: "/reviews" },
+  { title: "Tồn kho", url: "/inventory" },
+  { title: "Xuất nhập kho", url: "/stock-movements" },
+] as const;
+
+const orderItems = [
+  { title: "Đơn hàng", url: "/pos-orders" },
+  { title: "Đơn hàng Online", url: "/orders" },
+] as const;
 
 const items = [
   { title: "Tổng quan", url: "/", icon: LayoutDashboard },
-  { title: "Sản phẩm", url: "/products", icon: Package },
-  { title: "Danh mục", url: "/categories", icon: Tag },
-  { title: "Đơn hàng", url: "/orders", icon: ShoppingCart },
   { title: "Voucher", url: "/vouchers", icon: Ticket },
   { title: "Vòng quay", url: "/wheel", icon: Gift },
   { title: "Tin tức", url: "/news", icon: Newspaper },
@@ -41,6 +56,22 @@ export function AppSidebar() {
   const currentPath = useRouterState({ select: (s) => s.location.pathname });
   const isActive = (path: string) =>
     path === "/" ? currentPath === "/" : currentPath.startsWith(path);
+  const isProductSection = productItems.some((item) => isActive(item.url));
+  const isOrderSection = orderItems.some((item) => isActive(item.url));
+  const [productsOpen, setProductsOpen] = useState(isProductSection);
+  const [ordersOpen, setOrdersOpen] = useState(isOrderSection);
+
+  useEffect(() => {
+    if (isProductSection) {
+      setProductsOpen(true);
+    }
+  }, [isProductSection]);
+
+  useEffect(() => {
+    if (isOrderSection) {
+      setOrdersOpen(true);
+    }
+  }, [isOrderSection]);
 
   function handleLogout() {
     setToken(null);
@@ -65,6 +96,62 @@ export function AppSidebar() {
           <SidebarGroupLabel>Quản lý</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              <SidebarMenuItem>
+                <Collapsible open={productsOpen} onOpenChange={setProductsOpen}>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton
+                      isActive={isProductSection}
+                      tooltip="Quản lý sản phẩm"
+                      className="group"
+                    >
+                      <Package className="size-4" />
+                      <span>Quản lý sản phẩm</span>
+                      <ChevronDown className="ml-auto size-4 transition-transform group-data-[state=open]:rotate-180" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent asChild>
+                    <SidebarMenuSub>
+                      {productItems.map((item) => (
+                        <SidebarMenuSubItem key={item.title}>
+                          <SidebarMenuSubButton asChild isActive={isActive(item.url)}>
+                            <Link to={item.url} className="flex items-center gap-2">
+                              <span>{item.title}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </Collapsible>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <Collapsible open={ordersOpen} onOpenChange={setOrdersOpen}>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton
+                      isActive={isOrderSection}
+                      tooltip="Quản lý đơn hàng"
+                      className="group"
+                    >
+                      <ShoppingCart className="size-4" />
+                      <span>Quản lý đơn hàng</span>
+                      <ChevronDown className="ml-auto size-4 transition-transform group-data-[state=open]:rotate-180" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent asChild>
+                    <SidebarMenuSub>
+                      {orderItems.map((item) => (
+                        <SidebarMenuSubItem key={item.title}>
+                          <SidebarMenuSubButton asChild isActive={isActive(item.url)}>
+                            <Link to={item.url} className="flex items-center gap-2">
+                              <span>{item.title}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </Collapsible>
+              </SidebarMenuItem>
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
