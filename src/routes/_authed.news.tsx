@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Newspaper, Plus, Trash2 } from "lucide-react";
@@ -28,6 +28,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+const RichTextEditor = lazy(() =>
+  import("@/components/rich-text-editor").then((m) => ({ default: m.RichTextEditor })),
+);
 
 type NewsCategory = "promo" | "knowledge";
 
@@ -157,11 +161,7 @@ function NewsPage() {
   function validateForm() {
     if (!form.title.trim()) return "Tiêu đề bài viết là bắt buộc";
     if (!form.category) return "Danh mục bài viết là bắt buộc";
-    const blocks = form.content
-      .split("\n")
-      .map((item) => item.trim())
-      .filter(Boolean);
-    if (blocks.length === 0) return "Nội dung bài viết không được để trống";
+    if (!form.content.trim()) return "Nội dung bài viết không được để trống";
     return "";
   }
 
@@ -172,17 +172,13 @@ function NewsPage() {
       setFormError(error);
       return;
     }
-    const content = form.content
-      .split("\n")
-      .map((item) => item.trim())
-      .filter(Boolean);
     const payload: Record<string, unknown> = {
       id: form.id.trim() || undefined,
       title: form.title.trim(),
       category: form.category,
       thumbnail: form.thumbnail.trim() || undefined,
       excerpt: form.excerpt.trim() || undefined,
-      content,
+      content: form.content.trim(),
       tag: form.tag.trim() || undefined,
     };
     setFormError("");
@@ -341,13 +337,17 @@ function NewsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="news-content">Nội dung * (mỗi dòng là một block)</Label>
-                <Textarea
-                  id="news-content"
-                  value={form.content}
-                  onChange={(e) => setForm((prev) => ({ ...prev, content: e.target.value }))}
-                  rows={6}
-                />
+                <Label>Nội dung *</Label>
+                <Suspense
+                  fallback={
+                    <div className="h-[160px] rounded-md border border-input bg-muted animate-pulse" />
+                  }
+                >
+                  <RichTextEditor
+                    value={form.content}
+                    onChange={(val) => setForm((prev) => ({ ...prev, content: val }))}
+                  />
+                </Suspense>
               </div>
 
               <div className="space-y-2">

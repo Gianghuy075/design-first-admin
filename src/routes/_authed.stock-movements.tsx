@@ -4,7 +4,9 @@ import { Search, X } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { formatDate } from "@/lib/format";
 
@@ -27,20 +29,84 @@ const TYPE_LABEL: Record<StockMovement["type"], string> = {
   out: "Xuất kho",
 };
 
+type MovementFormState = {
+  code: string;
+  createdBy: string;
+};
+
+const INITIAL_MOVEMENTS: StockMovement[] = [];
+const defaultForm: MovementFormState = {
+  code: "",
+  createdBy: "",
+};
+
+function generateId() {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function StockMovementsPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | StockMovement["type"]>("all");
+  const [movements, setMovements] = useState<StockMovement[]>(INITIAL_MOVEMENTS);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [pendingType, setPendingType] = useState<StockMovement["type"] | null>(null);
+  const [form, setForm] = useState<MovementFormState>(defaultForm);
+  const [formError, setFormError] = useState("");
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return MOVEMENTS.filter((m) => {
+    return movements.filter((m) => {
       if (typeFilter !== "all" && m.type !== typeFilter) return false;
       if (!term) return true;
       return [m.code, m.createdBy].some((v) => v.toLowerCase().includes(term));
     });
-  }, [search, typeFilter]);
+  }, [search, typeFilter, movements]);
 
   const hasFilter = search.trim() || typeFilter !== "all";
+  const dialogTitle = pendingType ? `Tạo phiếu ${TYPE_LABEL[pendingType].toLowerCase()}` : "Tạo phiếu";
+  const dialogDescription = pendingType
+    ? `Điền thông tin phiếu ${TYPE_LABEL[pendingType].toLowerCase()} và lưu.`
+    : "Điền thông tin phiếu và lưu.";
+
+  function openCreate(type: StockMovement["type"]) {
+    setPendingType(type);
+    setForm(defaultForm);
+    setFormError("");
+    setDialogOpen(true);
+  }
+
+  function validateForm() {
+    if (!pendingType) return "Vui lòng chọn loại đơn";
+    if (!form.code.trim()) return "Mã đơn là bắt buộc";
+    if (!form.createdBy.trim()) return "Người tạo lệnh là bắt buộc";
+    return "";
+  }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const error = validateForm();
+    if (error) {
+      setFormError(error);
+      return;
+    }
+    setFormError("");
+
+    const newMovement: StockMovement = {
+      id: generateId(),
+      code: form.code.trim(),
+      type: pendingType!,
+      createdAt: new Date().toISOString(),
+      createdBy: form.createdBy.trim(),
+    };
+
+    setMovements((prev) => [newMovement, ...prev]);
+    setDialogOpen(false);
+    setPendingType(null);
+    setForm(defaultForm);
+  }
 
   return (
     <div>
@@ -49,8 +115,10 @@ function StockMovementsPage() {
         subtitle="Theo dõi phiếu xuất và nhập kho"
         action={
           <div className="flex flex-wrap gap-2">
-            <Button>Nhập kho</Button>
-            <Button variant="outline">Xuất kho</Button>
+            <Button type="button" onClick={() => openCreate("in")}>Nhập kho</Button>
+            <Button type="button" variant="outline" onClick={() => openCreate("out")}>
+              Xuất kho
+            </Button>
           </div>
         }
       />
@@ -117,6 +185,63 @@ function StockMovementsPage() {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setForm(defaultForm);
+            setFormError("");
+            setPendingType(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{dialogTitle}</DialogTitle>
+            <DialogDescription>{dialogDescription}</DialogDescription>
+          </DialogHeader>
+
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div className="space-y-2">
+              <Label htmlFor="movement-code">Mã đơn xuất-nhập *</Label>
+              <Input
+                id="movement-code"
+                value={form.code}
+                onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
+                placeholder="Ví dụ: XN-000123"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="movement-creator">Người tạo lệnh *</Label>
+              <Input
+                id="movement-creator"
+                value={form.createdBy}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, createdBy: event.target.value }))
+                }
+                placeholder="Ví dụ: Nguyễn Văn A"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Thời gian</Label>
+              <Input value={formatDate(new Date().toISOString())} disabled />
+            </div>
+
+            {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                Hủy
+              </Button>
+              <Button type="submit">Lưu</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

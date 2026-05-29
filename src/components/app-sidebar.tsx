@@ -11,6 +11,7 @@ import {
   ShoppingBag,
   Users,
   ChevronDown,
+  Settings,
 } from "lucide-react";
 import {
   Sidebar,
@@ -43,12 +44,18 @@ const orderItems = [
   { title: "Đơn hàng Online", url: "/orders" },
 ] as const;
 
+const userItems = [
+  { title: "Người dùng", url: "/users" },
+  { title: "Tài khoản", url: "/accounts" },
+] as const;
+
+const overviewItem = { title: "Tổng quan", url: "/", icon: LayoutDashboard } as const;
+
 const items = [
-  { title: "Tổng quan", url: "/", icon: LayoutDashboard },
   { title: "Voucher", url: "/vouchers", icon: Ticket },
   { title: "Vòng quay", url: "/wheel", icon: Gift },
   { title: "Tin tức", url: "/news", icon: Newspaper },
-  { title: "Người dùng", url: "/users", icon: Users },
+  { title: "Cấu hình hệ thống", url: "/user-settings", icon: Settings },
 ] as const;
 
 export function AppSidebar() {
@@ -58,8 +65,10 @@ export function AppSidebar() {
     path === "/" ? currentPath === "/" : currentPath.startsWith(path);
   const isProductSection = productItems.some((item) => isActive(item.url));
   const isOrderSection = orderItems.some((item) => isActive(item.url));
+  const isUserSection = userItems.some((item) => isActive(item.url));
   const [productsOpen, setProductsOpen] = useState(isProductSection);
   const [ordersOpen, setOrdersOpen] = useState(isOrderSection);
+  const [usersOpen, setUsersOpen] = useState(isUserSection);
 
   useEffect(() => {
     if (isProductSection) {
@@ -72,6 +81,12 @@ export function AppSidebar() {
       setOrdersOpen(true);
     }
   }, [isOrderSection]);
+
+  useEffect(() => {
+    if (isUserSection) {
+      setUsersOpen(true);
+    }
+  }, [isUserSection]);
 
   function handleLogout() {
     setToken(null);
@@ -96,6 +111,14 @@ export function AppSidebar() {
           <SidebarGroupLabel>Quản lý</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive(overviewItem.url)} tooltip={overviewItem.title}>
+                  <Link to={overviewItem.url} className="flex items-center gap-2">
+                    <overviewItem.icon className="size-4" />
+                    <span>{overviewItem.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 <Collapsible open={productsOpen} onOpenChange={setProductsOpen}>
                   <CollapsibleTrigger asChild>
@@ -140,6 +163,34 @@ export function AppSidebar() {
                   <CollapsibleContent asChild>
                     <SidebarMenuSub>
                       {orderItems.map((item) => (
+                        <SidebarMenuSubItem key={item.title}>
+                          <SidebarMenuSubButton asChild isActive={isActive(item.url)}>
+                            <Link to={item.url} className="flex items-center gap-2">
+                              <span>{item.title}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </Collapsible>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <Collapsible open={usersOpen} onOpenChange={setUsersOpen}>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton
+                      isActive={isUserSection}
+                      tooltip="Người dùng"
+                      className="group"
+                    >
+                      <Users className="size-4" />
+                      <span>Người dùng</span>
+                      <ChevronDown className="ml-auto size-4 transition-transform group-data-[state=open]:rotate-180" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent asChild>
+                    <SidebarMenuSub>
+                      {userItems.map((item) => (
                         <SidebarMenuSubItem key={item.title}>
                           <SidebarMenuSubButton asChild isActive={isActive(item.url)}>
                             <Link to={item.url} className="flex items-center gap-2">
